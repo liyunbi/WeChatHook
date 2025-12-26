@@ -8,31 +8,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 1. Install Theos Manually
+      - name: 1. Install Theos
         run: |
-          # 手动克隆 Theos，不依赖任何脚本，确保路径 100% 可控
+          # 标准安装：直接克隆到家目录
           git clone --recursive https://github.com/theos/theos.git $HOME/theos
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
 
-      - name: 2. Download SDK (Zip Mode)
+      - name: 2. Get SDKs (The Safe Way)
         run: |
-          # 直接下载 zip 包，避开 git clone 的冲突和报错
-          curl -L -o master.zip https://github.com/theos/sdks/archive/refs/heads/master.zip
-          unzip -q master.zip
-          # 创建目录并把解压出来的 SDK 塞进去
-          mkdir -p $HOME/theos/sdks
-          mv sdks-master/*.sdk $HOME/theos/sdks/
+          # 标准下载：直接克隆官方 SDK 仓库到 Theos 的 sdks 目录下
+          # 使用 --depth 1 减少下载时间
+          git clone --depth 1 https://github.com/theos/sdks.git $HOME/theos/sdks
 
-      - name: 3. Compile Forcefully
+      - name: 3. Build It
         run: |
-          # 【核心修复点】
-          # TARGET=iphone:clang:latest:latest 意思是：
-          # "别管 Makefile 里写什么 14.5 了，直接用你刚才下载到的那个 SDK！"
-          make package FINALPACKAGE=1 TARGET=iphone:clang:latest:latest
+          # 明确指定：使用 iphone 平台，clang 编译器，14.5 版本 SDK
+          # 这样编译器绝对不会找不到路
+          make package FINALPACKAGE=1 TARGET=iphone:clang:14.5:14.5
 
-      - name: 4. Upload Result
+      - name: 4. Upload
         uses: actions/upload-artifact@v4
         with:
           name: WeChatHook_Dylib
-          # 这里的路径是 Theos 编译生成的默认路径
+          # 这里的路径必须精准
           path: .theos/obj/debug/WeChatHook.dylib
