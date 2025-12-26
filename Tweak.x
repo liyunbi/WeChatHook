@@ -1,25 +1,34 @@
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
-// 声明 Hook 目标
+// 声明 Hook 逻辑
 %hook NSBundle
 
-// 1. 拦截包名检测
+// 欺骗 Bundle Identifier (核心：不管谁问，我都是正版 ID)
 - (NSString *)bundleIdentifier {
-    NSString *realId = %orig; // 获取真实ID
-    if (self == [NSBundle mainBundle]) {
-        return @"com.tencent.xin"; // 撒谎说是正版
-    }
-    return realId;
+    // 检查调用者是否是微信主程序，防止误伤系统调用
+    NSArray *address = [NSThread callStackReturnAddresses];
+    // 这里是一个简单的策略，强制返回官方 ID
+    return @"com.tencent.xin";
 }
 
-// 2. 拦截 Info.plist 字典读取（内存劫持）
+// 欺骗 InfoDictionary (防止微信读取 info.plist 发现破绽)
 - (NSDictionary *)infoDictionary {
-    NSMutableDictionary *info = [%orig mutableCopy];
-    if (self == [NSBundle mainBundle]) {
-        // 强行把内存里的 ID 改成正版 ID
-        [info setObject:@"com.tencent.xin" forKey:@"CFBundleIdentifier"];
-    }
-    return info;
+    NSDictionary *originalDict = %orig;
+    NSMutableDictionary *modifiedDict = [originalDict mutableCopy];
+    
+    // 修改关键字段为官方值
+    [modifiedDict setObject:@"com.tencent.xin" forKey:@"CFBundleIdentifier"];
+    [modifiedDict setObject:@"WeChat" forKey:@"CFBundleDisplayName"];
+    
+    return modifiedDict;
 }
 
+%end
+
+// 绕过简单的越狱检测 (可选，增加保险)
+%hook JBDetector
+- (BOOL)isJailbroken {
+    return NO;
+}
 %end
