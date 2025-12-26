@@ -7,9 +7,9 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-13
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Prepare Theos
         uses: subdiox/theos-action@v1
@@ -22,7 +22,7 @@ jobs:
           make package MESSAGES=yes
 
       - name: Upload Dylib
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: WeChatHook_Dylib
           path: .theos/obj/debug/WeChatHook.dylib
