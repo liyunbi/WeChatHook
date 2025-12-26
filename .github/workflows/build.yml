@@ -6,33 +6,36 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
+      # 1. 拉取你的代码 (v4版本)
       - uses: actions/checkout@v4
-      
-      - name: Install Theos
+
+      # 2. 手动安装 Theos (避免使用脚本带来的不确定性)
+      - name: Manual Install Theos
         run: |
-          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+          # 直接克隆到用户目录
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          # 设置环境变量
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-          
-      - name: Download iOS SDK (Official)
+
+      # 3. 强制下载官方 SDK (修复 Exit code 128 和 2)
+      - name: Setup SDKs Forcefully
         run: |
-          # 直接克隆 Theos 官方 SDK 仓库，包含 14.5 等标准 SDK，又快又准
+          # 关键一步：先暴力删除 sdks 文件夹，防止 Git 报错“文件夹已存在”
+          rm -rf $HOME/theos/sdks
+          # 然后再克隆，确保绝对成功
           git clone --depth 1 https://github.com/theos/sdks.git $HOME/theos/sdks
-          
+
+      # 4. 编译插件
       - name: Build Dylib
         run: |
-          # 强制指定使用 14.5 SDK 编译，确保路径匹配
-          make package FINALPACKAGE=1 SDKVERSION=14.5
-          
+          # 强制指定 SDK 版本为 14.5 (官方源里包含这个版本)
+          # 使用 debug=no 减小体积
+          make package FINALPACKAGE=1 SDKVERSION=14.5 debug=no messages=yes
+
+      # 5. 上传产物
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: WeChatHook_Dylib
-          path: packages/*.deb
-          # 注意：Theos 有时候会把编译产物放在 packages 文件夹，或者 .theos/obj/debug
-          # 为了保险，我们这次改一下上传路径逻辑
-      
-      - name: Upload Dylib File
-        uses: actions/upload-artifact@v4
-        with:
-          name: WeChatHook_Only_Dylib
+          # 准确抓取生成的文件
           path: .theos/obj/debug/WeChatHook.dylib
