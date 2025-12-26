@@ -1,28 +1,28 @@
-name: Build WeChat Hook
+name: Build WeChatHook
 
-on: [push]
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: All-in-One Build
+      - name: Prepare Theos
+        uses: subdiox/theos-action@v1
+        with:
+          theos-src: https://github.com/theos/theos
+          sdks-src: https://github.com/theos/sdks
+
+      - name: Build Tweak
         run: |
-          # 1. 纯净安装 Theos
-          git clone --recursive https://github.com/theos/theos.git $HOME/theos
-          
-          # 2. 纯净克隆官方 SDK (这是解决 Exit Code 2 的终极手段)
-          git clone --depth 1 https://github.com/theos/sdks.git $HOME/theos/sdks
-          
-          # 3. 在同一个环境下直接开始编译
-          export THEOS=$HOME/theos
-          make package FINALPACKAGE=1
-          
+          make package MESSAGES=yes
+
       - name: Upload Dylib
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: WeChatHook_Dylib
-          # 无论是什么版本，直接抓取生成的 dylib
-          path: .theos/obj/WeChatHook.dylib
+          path: .theos/obj/debug/WeChatHook.dylib
