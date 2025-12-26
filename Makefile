@@ -1,5 +1,5 @@
-# 目标提升到 iOS 15.0，适配现代微信
-TARGET := iphone:clang:latest:15.0
+# 目标锁定为 14.5，这是最稳的防封插件编译版本
+TARGET := iphone:clang:latest:14.5
 ARCHS = arm64
 THEOS_PACKAGE_SCHEME = rootless
 
