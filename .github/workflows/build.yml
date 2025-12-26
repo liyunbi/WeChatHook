@@ -1,0 +1,30 @@
+name: Build WeChat Hook
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+          
+      - name: Download iOS SDK
+        run: |
+          curl -L -o iOS_SDK.zip https://github.com/xybp888/iOS-SDKs/archive/refs/heads/master.zip
+          unzip -q iOS_SDK.zip
+          mv iOS-SDKs-master/iPhoneOS14.5.sdk $HOME/theos/sdks/
+          
+      - name: Build Dylib
+        run: |
+          make package FINALPACKAGE=1
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: WeChatHook_Dylib
+          path: .theos/obj/debug/WeChatHook.dylib
