@@ -6,32 +6,23 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      # 第一步：清理并获取你的代码
       - uses: actions/checkout@v4
 
-      # 第二步：安装开发环境 (不再手动 clone，改用官方一键脚本，最稳)
-      - name: Setup Theos
+      - name: All-in-One Build
         run: |
-          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-
-      # 第三步：精准获取 SDK (不再拉取整个仓库，只拿我们需要的这一个，防止路径出错)
-      - name: Get Single SDK
-        run: |
-          mkdir -p $HOME/theos/sdks
-          curl -L https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz -o $HOME/theos/sdks/sdk.tar.xz
-          tar -xf $HOME/theos/sdks/sdk.tar.xz -C $HOME/theos/sdks/
-          rm $HOME/theos/sdks/sdk.tar.xz
-
-      # 第四步：开始制造 (不再加乱七八糟的参数，让它自适应)
-      - name: Build Dylib
-        run: |
+          # 1. 纯净安装 Theos
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          
+          # 2. 纯净克隆官方 SDK (这是解决 Exit Code 2 的终极手段)
+          git clone --depth 1 https://github.com/theos/sdks.git $HOME/theos/sdks
+          
+          # 3. 在同一个环境下直接开始编译
           export THEOS=$HOME/theos
           make package FINALPACKAGE=1
-
-      # 第五步：交货 (精准定位生成的文件)
-      - name: Upload Artifact
+          
+      - name: Upload Dylib
         uses: actions/upload-artifact@v4
         with:
           name: WeChatHook_Dylib
-          path: .theos/obj/debug/WeChatHook.dylib
+          # 无论是什么版本，直接抓取生成的 dylib
+          path: .theos/obj/WeChatHook.dylib
