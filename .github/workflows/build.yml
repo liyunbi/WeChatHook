@@ -6,36 +6,33 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      # 1. 拉取你的代码 (v4版本)
       - uses: actions/checkout@v4
 
-      # 2. 手动安装 Theos (避免使用脚本带来的不确定性)
-      - name: Manual Install Theos
+      - name: 1. Install Theos Manually
         run: |
-          # 直接克隆到用户目录
+          # 手动克隆 Theos，不依赖任何脚本，确保路径 100% 可控
           git clone --recursive https://github.com/theos/theos.git $HOME/theos
-          # 设置环境变量
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
 
-      # 3. 强制下载官方 SDK (修复 Exit code 128 和 2)
-      - name: Setup SDKs Forcefully
+      - name: 2. Download SDK (Zip Mode)
         run: |
-          # 关键一步：先暴力删除 sdks 文件夹，防止 Git 报错“文件夹已存在”
-          rm -rf $HOME/theos/sdks
-          # 然后再克隆，确保绝对成功
-          git clone --depth 1 https://github.com/theos/sdks.git $HOME/theos/sdks
+          # 直接下载 zip 包，避开 git clone 的冲突和报错
+          curl -L -o master.zip https://github.com/theos/sdks/archive/refs/heads/master.zip
+          unzip -q master.zip
+          # 创建目录并把解压出来的 SDK 塞进去
+          mkdir -p $HOME/theos/sdks
+          mv sdks-master/*.sdk $HOME/theos/sdks/
 
-      # 4. 编译插件
-      - name: Build Dylib
+      - name: 3. Compile Forcefully
         run: |
-          # 强制指定 SDK 版本为 14.5 (官方源里包含这个版本)
-          # 使用 debug=no 减小体积
-          make package FINALPACKAGE=1 SDKVERSION=14.5 debug=no messages=yes
+          # 【核心修复点】
+          # TARGET=iphone:clang:latest:latest 意思是：
+          # "别管 Makefile 里写什么 14.5 了，直接用你刚才下载到的那个 SDK！"
+          make package FINALPACKAGE=1 TARGET=iphone:clang:latest:latest
 
-      # 5. 上传产物
-      - name: Upload Artifact
+      - name: 4. Upload Result
         uses: actions/upload-artifact@v4
         with:
           name: WeChatHook_Dylib
-          # 准确抓取生成的文件
+          # 这里的路径是 Theos 编译生成的默认路径
           path: .theos/obj/debug/WeChatHook.dylib
